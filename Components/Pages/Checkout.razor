@@ -1,0 +1,163 @@
+﻿@page "/checkout"
+@rendermode InteractiveServer
+@using FluentValidation
+@using AutoStore.Validators
+@inject ICartService CartService
+@inject IOrderService OrderService
+@inject ICurrentUserService CurrentUser
+@inject IValidator<CheckoutModel> Validator
+@inject NavigationManager Nav
+
+<PageTitle>Оформление заказа — АвтоМаркет</PageTitle>
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" style="color:#c62828;">Главная</a></li>
+            <li class="breadcrumb-item"><a href="/cart" style="color:#c62828;">Корзина</a></li>
+            <li class="breadcrumb-item active">Оформление заказа</li>
+        </ol>
+    </nav>
+
+    @* Шаги оформления *@
+    <div class="d-flex align-items-center gap-0 mb-5">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#999;">1</div>
+            <span style="font-size:0.85rem;color:#999;">Корзина</span>
+        </div>
+        <div style="flex:1;height:2px;background:#e0e0e0;margin:0 8px;max-width:60px;"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#c62828;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#fff;">2</div>
+            <span style="font-size:0.85rem;font-weight:700;color:#c62828;">Доставка</span>
+        </div>
+        <div style="flex:1;height:2px;background:#e0e0e0;margin:0 8px;max-width:60px;"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:#999;">3</div>
+            <span style="font-size:0.85rem;color:#999;">Готово</span>
+        </div>
+    </div>
+
+    @if (orderTotal == 0)
+    {
+        <div class="alert alert-warning">Корзина пуста. <a href="/products" style="color:#c62828;">Перейти в каталог</a>.</div>
+    }
+    else
+    {
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-7">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-geo-alt-fill me-2" style="color:#c62828;"></i>Данные для доставки
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">ФИО <span style="color:#c62828;">*</span></label>
+                            <input class="form-control" placeholder="Иванов Иван Иванович" @bind="model.FullName" />
+                            @if (validationErrors.ContainsKey(nameof(model.FullName)))
+                            { <div class="text-danger small mt-1">@validationErrors[nameof(model.FullName)]</div> }
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email <span style="color:#c62828;">*</span></label>
+                                <input class="form-control" placeholder="example@mail.ru" @bind="model.Email" />
+                                @if (validationErrors.ContainsKey(nameof(model.Email)))
+                                { <div class="text-danger small mt-1">@validationErrors[nameof(model.Email)]</div> }
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Телефон</label>
+                                <input class="form-control" placeholder="+7 (999) 000-00-00" @bind="model.Phone" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Адрес доставки <span style="color:#c62828;">*</span></label>
+                            <textarea class="form-control" rows="3" placeholder="Город, улица, дом, квартира" @bind="model.ShippingAddress"></textarea>
+                            @if (validationErrors.ContainsKey(nameof(model.ShippingAddress)))
+                            { <div class="text-danger small mt-1">@validationErrors[nameof(model.ShippingAddress)]</div> }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(submitError))
+                        {
+                            <div class="alert alert-danger">@submitError</div>
+                        }
+
+                        <button class="btn btn-success btn-lg w-100 mt-2" @onclick="PlaceOrder" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            @(isSubmitting ? "Обработка..." : "Подтвердить заказ")
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="cart-summary-box">
+                    <div style="font-size:0.8rem;color:#aaa;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Ваш заказ</div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size:0.9rem;color:#ddd;">
+                        <span>Позиций</span>
+                        <span>@partsCount шт.</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" style="font-size:0.9rem;color:#ddd;">
+                        <span>Доставка</span>
+                        <span style="color:@(orderTotal >= 5000 ? "#4caf50" : "#ddd");">
+                            @(orderTotal >= 5000 ? "Бесплатно" : "По тарифу")
+                        </span>
+                    </div>
+                    <hr style="border-color:#333;" />
+                    <div class="total-label">Итого</div>
+                    <div class="total-amount">@orderTotal.ToString("N0") ₽</div>
+                    <div style="font-size:0.75rem;color:#666;margin-top:12px;">
+                        <i class="bi bi-shield-lock-fill" style="color:#c62828;"></i> Безопасная оплата. Гарантия возврата.
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private CheckoutModel model = new();
+    private Dictionary<string, string> validationErrors = new();
+    private string? submitError;
+    private decimal orderTotal;
+    private int partsCount;
+    private int buyerId;
+    private bool isSubmitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var buyer = await CurrentUser.GetOrCreateDemoCustomerAsync();
+        buyerId = buyer.Id;
+        var items = (await CartService.GetCartAsync(buyerId)).ToList();
+        partsCount = items.Sum(i => i.Quantity);
+        orderTotal = await CartService.GetTotalAsync(buyerId);
+    }
+
+    private async Task PlaceOrder()
+    {
+        validationErrors.Clear();
+        submitError = null;
+        var result = await Validator.ValidateAsync(model);
+        if (!result.IsValid)
+        {
+            foreach (var f in result.Errors)
+                validationErrors[f.PropertyName] = f.ErrorMessage;
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var order = await OrderService.CreateFromCartAsync(buyerId, model.ShippingAddress);
+            Nav.NavigateTo($"/orders/{order.Id}");
+        }
+        catch (Exception ex)
+        {
+            submitError = ex.Message;
+            isSubmitting = false;
+        }
+    }
+}

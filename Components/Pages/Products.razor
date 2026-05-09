@@ -1,0 +1,136 @@
+@page "/products"
+@rendermode InteractiveServer
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject ICartService CartService
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+
+<PageTitle>Каталог запчастей — АвтоМаркет</PageTitle>
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" style="color:#c62828;">Главная</a></li>
+            <li class="breadcrumb-item active">Каталог запчастей</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4 align-items-start">
+
+        @* Сайдбар с категориями *@
+        <div class="col-lg-2 col-md-3">
+            <div class="sidebar-card">
+                <div class="sidebar-card-header">
+                    <i class="bi bi-funnel-fill"></i> Категории
+                </div>
+                <div class="category-filter-item @(SelectedCategoryId == 0 ? "active" : "")"
+                     @onclick="() => SelectCategory(0)">
+                    <i class="bi bi-grid-fill"></i> Все запчасти
+                </div>
+                @if (categories != null)
+                {
+                    foreach (var cat in categories)
+                    {
+                        var catId = cat.Id;
+                        <div class="category-filter-item @(SelectedCategoryId == catId ? "active" : "")"
+                             @onclick="() => SelectCategory(catId)">
+                            <i class="bi bi-chevron-right"></i> @cat.Name
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        @* Список запчастей *@
+        <div class="col-lg-10 col-md-9">
+            @if (parts == null)
+            {
+                <p><em>Загрузка...</em></p>
+            }
+            else if (!parts.Any())
+            {
+                <div class="alert alert-info">Запчасти не найдены.</div>
+            }
+            else
+            {
+                <div class="results-bar">
+                    <span>Найдено: <strong>@parts.Count() запчастей</strong></span>
+                    <span style="color:#aaa; font-size:0.8rem;"><i class="bi bi-check-circle-fill" style="color:#c62828;"></i> Все в наличии</span>
+                </div>
+
+                <div class="row g-3">
+                    @foreach (var part in parts)
+                    {
+                        <div class="col-xl-3 col-lg-4 col-md-6">
+                            <div class="part-card">
+                                @if (!string.IsNullOrEmpty(part.ImageUrl))
+                                {
+                                    <img src="@part.ImageUrl" class="part-card-img" alt="@part.Name" />
+                                }
+                                else
+                                {
+                                    <div class="part-card-img-placeholder">
+                                        <i class="bi bi-gear"></i>
+                                    </div>
+                                }
+                                <div class="part-card-body">
+                                    <div class="part-card-category">@part.Category?.Name</div>
+                                    <div class="part-card-name">@part.Name</div>
+                                    <div class="part-card-desc">@part.Description</div>
+                                </div>
+                                <div class="part-card-footer">
+                                    <div>
+                                        <div class="part-card-price">@part.Price.ToString("N0") ₽</div>
+                                        <div class="part-card-stock">В наличии: @part.Stock шт.</div>
+                                    </div>
+                                    <div class="d-flex flex-column gap-1">
+                                        <a class="btn-detail" href="@($"/products/{part.Id}")">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <button class="btn-add-cart" @onclick="() => AddToCart(part.Id)" disabled="@(part.Stock == 0)">
+                                            <i class="bi bi-cart-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private IEnumerable<Models.Product>? parts;
+    private IEnumerable<Models.Category>? categories;
+    private int SelectedCategoryId { get; set; } = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await CategoryService.GetAllAsync();
+        await LoadParts();
+    }
+
+    private async Task SelectCategory(int categoryId)
+    {
+        SelectedCategoryId = categoryId;
+        await LoadParts();
+    }
+
+    private async Task LoadParts()
+    {
+        parts = SelectedCategoryId == 0
+            ? await ProductService.GetAllAsync()
+            : await ProductService.GetByCategoryAsync(SelectedCategoryId);
+    }
+
+    private async Task AddToCart(int partId)
+    {
+        var buyer = await CurrentUser.GetOrCreateDemoCustomerAsync();
+        await CartService.AddToCartAsync(buyer.Id, partId);
+        Nav.NavigateTo("/cart");
+    }
+}

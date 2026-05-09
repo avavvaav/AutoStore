@@ -1,0 +1,125 @@
+@page "/orders"
+@page "/orders/{Id:int?}"
+@rendermode InteractiveServer
+@inject IOrderService OrderService
+@inject ICurrentUserService CurrentUser
+
+<PageTitle>Мои заказы — АвтоМаркет</PageTitle>
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" style="color:#c62828;">Главная</a></li>
+            <li class="breadcrumb-item active">Мои заказы</li>
+        </ol>
+    </nav>
+
+    <h2 class="fw-bold mb-4" style="color:#1a1a1a;"><i class="bi bi-receipt me-2" style="color:#c62828;"></i>Мои заказы</h2>
+
+    @if (customerOrders == null)
+    {
+        <p><em>Загрузка...</em></p>
+    }
+    else if (!customerOrders.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-inbox" style="font-size:5rem; color:#ddd;"></i>
+            <h4 class="mt-3 text-muted">Заказов пока нет</h4>
+            <a href="/products" class="btn btn-primary mt-2">
+                <i class="bi bi-tools me-1"></i> Перейти в каталог
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="card p-0 overflow-hidden">
+            <table class="table orders-table mb-0">
+                <thead>
+                    <tr>
+                        <th>№ заказа</th>
+                        <th>Дата</th>
+                        <th>Состав</th>
+                        <th>Адрес</th>
+                        <th>Сумма</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in customerOrders)
+                    {
+                        <tr class="@(Id == order.Id ? "table-active" : "")">
+                            <td><strong style="color:#c62828;">#@order.Id</strong></td>
+                            <td style="font-size:0.85rem; color:#666;">@order.CreatedAt.ToLocalTime().ToString("dd.MM.yyyy")<br/><span style="color:#aaa;">@order.CreatedAt.ToLocalTime().ToString("HH:mm")</span></td>
+                            <td>
+                                <ul class="list-unstyled mb-0" style="font-size:0.82rem;">
+                                    @foreach (var item in order.OrderItems)
+                                    {
+                                        <li style="color:#444;">@item.Product.Name <span style="color:#999;">× @item.Quantity</span></li>
+                                    }
+                                </ul>
+                            </td>
+                            <td style="font-size:0.82rem; color:#666; max-width:160px;">@order.ShippingAddress</td>
+                            <td style="font-weight:800; color:#c62828; white-space:nowrap;">@order.TotalAmount.ToString("N0") ₽</td>
+                            <td>
+                                <span class="status-pill" style="background:@GetStatusBg(order.Status); color:@GetStatusColor(order.Status);">
+                                    @GetStatusLabel(order.Status)
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private List<Models.Order>? customerOrders;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var buyer = await CurrentUser.GetOrCreateDemoCustomerAsync();
+        customerOrders = (await OrderService.GetByCustomerAsync(buyer.Id)).ToList();
+    }
+
+    private string GetStatusBadgeColor(Models.OrderStatus status) => status switch
+    {
+        Models.OrderStatus.Pending => "warning",
+        Models.OrderStatus.Processing => "info",
+        Models.OrderStatus.Shipped => "primary",
+        Models.OrderStatus.Delivered => "success",
+        Models.OrderStatus.Cancelled => "danger",
+        _ => "secondary"
+    };
+
+    private string GetStatusBg(Models.OrderStatus status) => status switch
+    {
+        Models.OrderStatus.Pending => "#fff8e1",
+        Models.OrderStatus.Processing => "#e3f2fd",
+        Models.OrderStatus.Shipped => "#e8f5e9",
+        Models.OrderStatus.Delivered => "#e8f5e9",
+        Models.OrderStatus.Cancelled => "#ffebee",
+        _ => "#f5f5f5"
+    };
+
+    private string GetStatusColor(Models.OrderStatus status) => status switch
+    {
+        Models.OrderStatus.Pending => "#f57f17",
+        Models.OrderStatus.Processing => "#1565c0",
+        Models.OrderStatus.Shipped => "#2e7d32",
+        Models.OrderStatus.Delivered => "#1b5e20",
+        Models.OrderStatus.Cancelled => "#c62828",
+        _ => "#555"
+    };
+
+    private string GetStatusLabel(Models.OrderStatus status) => status switch
+    {
+        Models.OrderStatus.Pending => "Ожидает",
+        Models.OrderStatus.Processing => "В обработке",
+        Models.OrderStatus.Shipped => "Отправлен",
+        Models.OrderStatus.Delivered => "Доставлен",
+        Models.OrderStatus.Cancelled => "Отменён",
+        _ => status.ToString()
+    };
+}

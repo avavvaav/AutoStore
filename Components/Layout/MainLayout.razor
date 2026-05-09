@@ -1,0 +1,29 @@
+@inherits LayoutComponentBase
+
+<div class="page d-flex flex-column min-vh-100">
+    <NavMenu />
+
+    <main class="flex-grow-1">
+        @Body
+    </main>
+
+    <footer class="bg-dark text-white py-4 mt-auto">
+        <div class="container">
+            <div class="footer-inner">
+                <div class="footer-brand">
+                    <span class="red">Авто</span>Маркет
+                    <div style="font-size:0.75rem; color:#777; font-weight:400; margin-top:2px;">Магазин автозапчастей</div>
+                </div>
+                <div class="footer-links">
+                    <a href="/">Главная</a>
+                    <a href="/products">Каталог</a>
+                    <a href="/cart">Корзина</a>
+                    <a href="/orders">Заказы</a>
+                </div>
+                <div style="font-size:0.8rem; color:#666;">
+                    &copy; @DateTime.Now.Year АвтоМаркет
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>

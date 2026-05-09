@@ -1,0 +1,149 @@
+@page "/cart"
+@rendermode InteractiveServer
+@inject ICartService CartService
+@inject ICurrentUserService CurrentUser
+@inject NavigationManager Nav
+
+<PageTitle>Корзина — АвтоМаркет</PageTitle>
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" style="color:#c62828;">Главная</a></li>
+            <li class="breadcrumb-item active">Корзина</li>
+        </ol>
+    </nav>
+
+    <h2 class="fw-bold mb-4" style="color:#1a1a1a;"><i class="bi bi-cart3 me-2" style="color:#c62828;"></i>Корзина</h2>
+
+    @if (cartParts == null)
+    {
+        <p><em>Загрузка...</em></p>
+    }
+    else if (!cartParts.Any())
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-cart-x" style="font-size:5rem; color:#ddd;"></i>
+            <h4 class="mt-3 text-muted">Корзина пуста</h4>
+            <p class="text-muted">Добавьте запчасти из каталога</p>
+            <a href="/products" class="btn btn-primary mt-2">
+                <i class="bi bi-tools me-1"></i> Перейти в каталог
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4 align-items-start">
+            @* Таблица товаров *@
+            <div class="col-lg-8">
+                <div class="card p-0 overflow-hidden">
+                    <table class="table cart-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Запчасть</th>
+                                <th>Цена</th>
+                                <th style="width:160px;">Кол-во</th>
+                                <th>Сумма</th>
+                                <th style="width:50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in cartParts)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            @if (!string.IsNullOrEmpty(item.Product.ImageUrl))
+                                            {
+                                                <img src="@item.Product.ImageUrl" style="width:56px;height:56px;object-fit:cover;border-radius:6px;" />
+                                            }
+                                            <div>
+                                                <div class="fw-semibold" style="font-size:0.9rem;">@item.Product.Name</div>
+                                                <div style="font-size:0.75rem;color:#999;">@item.Product.Category?.Name</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="white-space:nowrap; font-weight:600; color:#c62828;">@item.Product.Price.ToString("N0") ₽</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <button class="btn btn-outline-secondary" @onclick="() => UpdateQty(item.Id, item.Quantity - 1)">−</button>
+                                            <input type="number" class="form-control text-center" value="@item.Quantity"
+                                                   @onchange="@(e => UpdateQty(item.Id, int.Parse(e.Value?.ToString() ?? "1")))" />
+                                            <button class="btn btn-outline-secondary" @onclick="() => UpdateQty(item.Id, item.Quantity + 1)">+</button>
+                                        </div>
+                                    </td>
+                                    <td style="white-space:nowrap;"><strong>@((item.Product.Price * item.Quantity).ToString("N0")) ₽</strong></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteItem(item.Id)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <a href="/products" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Продолжить покупки
+                    </a>
+                </div>
+            </div>
+
+            @* Итоговый блок *@
+            <div class="col-lg-4">
+                <div class="cart-summary-box">
+                    <div class="total-label mb-1">Итого к оплате</div>
+                    <div class="total-amount mb-3">@orderTotal.ToString("N0") ₽</div>
+                    <hr style="border-color:#333; margin: 16px 0;" />
+                    <div style="font-size:0.82rem; color:#777; margin-bottom:12px;">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Позиций в корзине</span>
+                            <span style="color:#ddd;">@cartParts.Sum(i => i.Quantity) шт.</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Доставка</span>
+                            <span style="color:@(orderTotal >= 5000 ? "#4caf50" : "#ddd");">
+                                @(orderTotal >= 5000 ? "Бесплатно" : "Рассчитывается")
+                            </span>
+                        </div>
+                    </div>
+                    <a href="/checkout" class="btn-checkout d-block text-center text-decoration-none">
+                        Оформить заказ <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Models.CartItem>? cartParts;
+    private decimal orderTotal;
+    private int buyerId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var buyer = await CurrentUser.GetOrCreateDemoCustomerAsync();
+        buyerId = buyer.Id;
+        await RefreshCartAsync();
+    }
+
+    private async Task RefreshCartAsync()
+    {
+        cartParts = (await CartService.GetCartAsync(buyerId)).ToList();
+        orderTotal = await CartService.GetTotalAsync(buyerId);
+    }
+
+    private async Task UpdateQty(int itemId, int qty)
+    {
+        await CartService.UpdateQuantityAsync(itemId, qty);
+        await RefreshCartAsync();
+    }
+
+    private async Task DeleteItem(int itemId)
+    {
+        await CartService.RemoveFromCartAsync(itemId);
+        await RefreshCartAsync();
+    }
+}
