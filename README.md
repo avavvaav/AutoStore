@@ -51,10 +51,81 @@
 
 ## 📁 Структура проекта
 ```
-
+AutoStore/
+├── AutoStore/ # 📦 Основной веб-проект
+│ ├── Components/ # 🧩 Blazor компоненты
+│ │ ├── Pages/ # 📄 Страницы приложения
+│ │ │ ├── Products.razor # Каталог автозапчастей
+│ │ │ ├── ProductDetails.razor # Карточка товара с характеристиками
+│ │ │ ├── Cart.razor # Корзина покупок
+│ │ │ ├── Checkout.razor # Оформление заказа
+│ │ │ ├── Orders.razor # История заказов
+│ │ │ └── Home.razor # Главная страница
+│ │ └── Layout/ # 🏗️ Макеты и навигация
+│ │ ├── MainLayout.razor
+│ │ └── NavMenu.razor
+│ │
+│ ├── Data/ # 🗄️ Доступ к данным
+│ │ ├── Configurations/ # ⚙️ Fluent API конфигурации
+│ │ │ ├── CategoryConfiguration.cs
+│ │ │ ├── ProductConfiguration.cs
+│ │ │ ├── CustomerConfiguration.cs
+│ │ │ ├── OrderConfiguration.cs
+│ │ │ ├── CartItemConfiguration.cs
+│ │ │ └── ProductDetailsConfiguration.cs
+│ │ ├── DbSeeder.cs # 🌱 Начальные данные (Seed)
+│ │ └── StoreContext.cs # 🔗 Контекст БД
+│ │
+│ ├── Models/ # 📋 Модели сущностей
+│ │ ├── Category.cs # 🏷️ Категория автозапчастей
+│ │ ├── Product.cs # 🔧 Автозапчасть
+│ │ ├── ProductDetails.cs # 📊 Характеристики запчасти (1:1)
+│ │ ├── Customer.cs # 👤 Покупатель
+│ │ ├── Order.cs # 📦 Заказ
+│ │ ├── OrderItem.cs # 📃 Позиция заказа
+│ │ └── CartItem.cs # 🛒 Корзина
+│ │
+│ ├── Repositories/ # 📚 Репозитории
+│ │ ├── IRepository.cs # 🔌 Интерфейс универсального репозитория
+│ │ ├── Repository.cs # ⚙️ Реализация универсального репозитория
+│ │ ├── IProductRepository.cs # 🔌 Интерфейс репозитория товаров
+│ │ ├── ProductRepository.cs # 🔧 Репозиторий товаров (+ Include)
+│ │ ├── IOrderRepository.cs # 🔌 Интерфейс репозитория заказов
+│ │ └── OrderRepository.cs # 📦 Репозиторий заказов (+ Include)
+│ │
+│ ├── Services/ # ⚙️ Бизнес-логика
+│ │ ├── IProductService.cs
+│ │ ├── ProductService.cs # CRUD товаров
+│ │ ├── ICategoryService.cs
+│ │ ├── CategoryService.cs # CRUD категорий
+│ │ ├── ICartService.cs
+│ │ ├── CartService.cs # Управление корзиной
+│ │ ├── IOrderService.cs
+│ │ ├── OrderService.cs # Создание заказов, списание товаров
+│ │ ├── ICurrentUserService.cs
+│ │ └── CurrentUserService.cs # 👤 Демо-пользователь
+│ │
+│ ├── Validators/ # ✅ FluentValidation валидаторы
+│ │ ├── CustomerValidator.cs # Валидация покупателя
+│ │ ├── CheckoutValidator.cs # Валидация формы заказа
+│ │ └── CheckoutModel.cs # Модель данных формы
+│ │
+│ ├── wwwroot/ # 🌐 Статические файлы
+│ │ ├── css/
+│ │ ├── js/
+│ │ └── images/
+│ │
+│ ├── Migrations/ # 📜 EF Core миграции
+│ ├── appsettings.json # ⚙️ Конфигурация (строки подключения)
+│ ├── appsettings.Development.json # 🛠️ Конфигурация для разработки
+│ ├── Program.cs # 🚀 Точка входа, DI, миграции
+│ └── Dockerfile # 🐳 Docker-образ приложения
+│
+├── docker-compose.yml # 🐳 Оркестрация контейнеров
+├── README.md # 📖 Документация
+└── .gitignore # 🚫 Исключения для Git
 ```
 
--
 ---
 
 ## Модель данных
